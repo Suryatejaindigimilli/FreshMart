@@ -6,6 +6,9 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  ScrollView,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -15,167 +18,211 @@ export default function SignupScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
 
-  const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
+  const isValidEmail = (v) => /\S+@\S+\.\S+/.test(v);
 
   return (
-    <View style={styles.container}>
-      {/* Logo */}
-      <Image
-        source={require('../assets/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-
-      {/* Heading */}
-      <Text style={styles.heading}>Sign Up</Text>
-      <Text style={styles.subText}>Enter your credentials to continue</Text>
-
-      {/* Username */}
-      <Text style={styles.label}>Username</Text>
-      <TextInput
-        placeholder="Enter your full name"
-        value={username}
-        onChangeText={setUsername}
-        style={styles.input}
-      />
-
-      {/* Email */}
-      <Text style={styles.label}>Email</Text>
-      <View style={styles.inputWrapper}>
-        <TextInput
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          style={styles.input}
-        />
-        {isValidEmail(email) && (
-          <Icon name="checkmark-circle" size={20} color="#2e7d32" style={styles.validIcon} />
-        )}
-      </View>
-
-      {/* Password */}
-      <Text style={styles.label}>Password</Text>
-      <View style={styles.inputWrapper}>
-        <TextInput
-          placeholder="Enter password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={secureText}
-          style={styles.input}
-        />
-        <TouchableOpacity onPress={() => setSecureText(!secureText)} style={styles.eyeIcon}>
-          <Icon name={secureText ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+    <View style={styles.safeArea}>
+      {/* Header same as other screens */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={22} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Sign Up</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Shop' })}>
+          <Icon name="home-outline" size={22} color="#000" />
         </TouchableOpacity>
       </View>
 
-      {/* Terms */}
-      <Text style={styles.terms}>
-        By continuing you agree to our{' '}
-        <Text style={styles.link}>Terms of Service</Text> and{' '}
-        <Text style={styles.link}>Privacy Policy</Text>.
-      </Text>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.topBlock}>
+          <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.subtitle}>Enter your credentials to continue</Text>
+        </View>
 
-      {/* Sign Up Button */}
-      <TouchableOpacity style={styles.signupButton} onPress={() => navigation.replace('MainTabs')}>
-          <Text style={styles.signupText}>Sign Up</Text>
-        </TouchableOpacity>
+        <View style={styles.card}>
+          <Text style={styles.label}>Username</Text>
+          <View style={styles.inputRow}>
+            <Icon name="person-outline" size={18} color="#777" />
+            <TextInput
+              placeholder="Enter your full name"
+              value={username}
+              onChangeText={setUsername}
+              style={styles.input}
+            />
+          </View>
 
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputRow}>
+            <Icon name="mail-outline" size={18} color="#777" />
+            <TextInput
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={styles.input}
+            />
+            {isValidEmail(email.trim()) && (
+              <Icon name="checkmark-circle" size={18} color="#2e7d32" />
+            )}
+          </View>
 
-      {/* Footer */}
-      <Text style={styles.footerText}>
-        Already have an account?{' '}
-        <Text style={styles.loginLink} onPress={() => navigation.navigate('LoginScreen')}>
-          Log In
-        </Text>
-      </Text>
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputRow}>
+            <Icon name="lock-closed-outline" size={18} color="#777" />
+            <TextInput
+              placeholder="Enter password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={secureText}
+              style={styles.input}
+            />
+            <TouchableOpacity onPress={() => setSecureText(!secureText)}>
+              <Icon name={secureText ? 'eye-off-outline' : 'eye-outline'} size={18} color="#777" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.terms}>
+            By continuing you agree to our <Text style={styles.link}>Terms of Service</Text> and{' '}
+            <Text style={styles.link}>Privacy Policy</Text>.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.signupButton}
+            onPress={() => navigation.replace('MainTabs')}
+          >
+            <Text style={styles.signupText}>Sign Up</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.footerText}>
+            Already have an account?{' '}
+            <Text style={styles.link} onPress={() => navigation.navigate('LoginScreen')}>
+              Log In
+            </Text>
+          </Text>
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: 25,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     backgroundColor: '#fff',
-    justifyContent: 'center',
+  },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+
+  container: {
+    padding: 20,
+    paddingBottom: 30,
+  },
+  topBlock: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 18,
   },
   logo: {
-    width: 50,
-    height: 50,
-    alignSelf: 'center',
-    marginBottom: 30,
+    width: 48,
+    height: 48,
+    marginBottom: 12,
   },
-  heading: {
+  title: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#111',
-    textAlign: 'center',
-    marginBottom: 4,
   },
-  subText: {
-    textAlign: 'center',
+  subtitle: {
+    marginTop: 6,
     fontSize: 13,
     color: '#777',
-    marginBottom: 25,
+    textAlign: 'center',
   },
+
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+  },
+
   label: {
     fontSize: 13,
-    fontWeight: '500',
-    marginTop: 10,
-    marginBottom: 4,
-    color: '#444',
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
   },
   input: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    paddingVertical: 8,
-    paddingRight: 40,
+    flex: 1,
     fontSize: 14,
+    color: '#111',
+    padding: 0,
   },
-  inputWrapper: {
-    position: 'relative',
-    marginBottom: 10,
-  },
-  validIcon: {
-    position: 'absolute',
-    right: 0,
-    top: 8,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 0,
-    top: 8,
-  },
+
   terms: {
     fontSize: 12,
     color: '#777',
-    marginVertical: 20,
+    marginTop: 14,
     textAlign: 'center',
   },
   link: {
     color: '#2e7d32',
-    fontWeight: '600',
+    fontWeight: '700',
   },
+
   signupButton: {
     backgroundColor: '#2e7d32',
-    padding: 14,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 18,
     alignItems: 'center',
-    marginBottom: 20,
   },
   signupText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 15,
   },
+
   footerText: {
     textAlign: 'center',
+    marginTop: 16,
     fontSize: 13,
-    color: '#555',
-  },
-  loginLink: {
-    color: '#2e7d32',
-    fontWeight: '600',
+    color: '#444',
   },
 });

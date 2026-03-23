@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_URL } from '@env';
 import {
   View,
   Text,
@@ -8,6 +9,9 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,165 +21,263 @@ const RegistrationScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secure, setSecure] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const base = (API_URL || 'http://192.168.0.137:5000').replace(/\/+$/, '');
 
   const handleSignUp = async () => {
-    if (!username.trim() || !email.trim() || !password.trim()) {
+    const u = username.trim();
+    const e = email.trim();
+    const p = password.trim();
+
+    if (!u || !e || !p) {
       Alert.alert('Missing Fields', 'Please fill in all the required fields.');
       return;
     }
 
+    setLoading(true);
     try {
-      const response = await fetch('http://192.168.1.36:5000/register', {
+      const res = await fetch(`${base}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username: u, email: e, password: p }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        await AsyncStorage.setItem('userToken', data.token); // fallback if no token returned
-        Alert.alert('Success', 'Registration successful!');
-        navigation.replace('MainTabs'); // Navigate to login or Home/MainTabs if auto login
-      } else {
-        Alert.alert('Registration Failed', data.message || 'Something went wrong.');
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
       }
-    } catch (error) {
-      Alert.alert('Error', 'Network error. Please try again.');
-      console.error('Registration Error:', error);
+
+      if (!res.ok) {
+        Alert.alert('Registration Failed', data.message || `HTTP ${res.status}`);
+        return;
+      }
+
+      if (data?.token) {
+        await AsyncStorage.setItem('userToken', String(data.token));
+        Alert.alert('Success', 'Registration successful!');
+        navigation.replace('MainTabs');
+      } else {
+        Alert.alert('Success', 'Registered! Please login.');
+        navigation.replace('LoginScreen');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Network error. Check IP / cleartext / same WiFi.');
+      console.log('Registration Error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Image source={require('../assets/logo.png')} style={styles.logo} />
-
-      <Text style={styles.title}>Sign Up</Text>
-      <Text style={styles.subtitle}>Enter your credentials to continue</Text>
-
-      <Text style={styles.label}>Username</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Your name"
-        value={username}
-        onChangeText={setUsername}
-      />
-
-      <Text style={styles.label}>Email</Text>
-      <View style={styles.inputWrapper}>
-        <TextInput
-          // eslint-disable-next-line react-native/no-inline-styles
-          style={[styles.input, { flex: 1 }]}
-          placeholder="example@gmail.com"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-        />
-        {email.length > 5 && <Icon name="checkmark" size={20} color="green" />}
-      </View>
-
-      <Text style={styles.label}>Password</Text>
-      <View style={styles.inputWrapper}>
-        <TextInput
-          // eslint-disable-next-line react-native/no-inline-styles
-          style={[styles.input, { flex: 1 }]}
-          placeholder="••••••••"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={secure}
-        />
-        <TouchableOpacity onPress={() => setSecure(!secure)}>
-          <Icon name={secure ? 'eye-off' : 'eye'} size={20} color="#888" />
+    <View style={styles.safeArea}>
+      {/* Header (same style as other screens) */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={22} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Sign Up</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Shop' })}>
+          <Icon name="home-outline" size={22} color="#000" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.agreeText}>
-        By continuing you agree to our{' '}
-        <Text style={styles.link}>Terms of Service</Text> and{' '}
-        <Text style={styles.link}>Privacy Policy</Text>.
-      </Text>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.topBlock}>
+          <Image source={require('../assets/logo.png')} style={styles.logo} />
+          <Text style={styles.title}>Create your account</Text>
+          <Text style={styles.subtitle}>Enter your details to continue</Text>
+        </View>
 
-      <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
-        <Text style={styles.signupText}>Sign Up</Text>
-      </TouchableOpacity>
+        <View style={styles.card}>
+          <Text style={styles.label}>Full Name</Text>
+          <View style={styles.inputRow}>
+            <Icon name="person-outline" size={18} color="#777" />
+            <TextInput
+              style={styles.input}
+              placeholder="Your name"
+              value={username}
+              onChangeText={setUsername}
+            />
+          </View>
 
-      <Text style={styles.footerText}>
-        Already have an account?{' '}
-        <Text style={styles.link} onPress={() => navigation.navigate('LoginScreen')}>
-          Login
-        </Text>
-      </Text>
-    </ScrollView>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputRow}>
+            <Icon name="mail-outline" size={18} color="#777" />
+            <TextInput
+              style={styles.input}
+              placeholder="example@gmail.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {email.trim().length > 5 && <Icon name="checkmark" size={18} color="#2e7d32" />}
+          </View>
+
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputRow}>
+            <Icon name="lock-closed-outline" size={18} color="#777" />
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={secure}
+            />
+            <TouchableOpacity onPress={() => setSecure(!secure)}>
+              <Icon name={secure ? 'eye-off' : 'eye'} size={18} color="#777" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.agreeText}>
+            By continuing you agree to our <Text style={styles.link}>Terms</Text> and{' '}
+            <Text style={styles.link}>Privacy</Text>.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.signupButton, loading && { opacity: 0.7 }]}
+            onPress={handleSignUp}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.signupText}>Create Account</Text>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.footerText}>
+            Already have an account?{' '}
+            <Text style={styles.link} onPress={() => navigation.navigate('LoginScreen')}>
+              Login
+            </Text>
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
+  safeArea: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     backgroundColor: '#fff',
-    justifyContent: 'center',
   },
-  logo: {
-    width: 40,
-    height: 40,
-    alignSelf: 'center',
-    marginBottom: 30,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'left',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 20,
-  },
-  label: {
-    fontWeight: '600',
-    marginTop: 10,
-    marginBottom: 6,
-    fontSize: 14,
-  },
-  input: {
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-    fontSize: 14,
-    paddingVertical: 8,
-  },
-  inputWrapper: {
+
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderColor: '#ccc',
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
   },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+
+  container: {
+    padding: 20,
+    paddingBottom: 30,
+  },
+  topBlock: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  logo: {
+    width: 48,
+    height: 48,
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111',
+  },
+  subtitle: {
+    marginTop: 6,
+    fontSize: 13,
+    color: '#777',
+    textAlign: 'center',
+  },
+
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+  },
+
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111',
+    padding: 0,
+  },
+
   agreeText: {
     fontSize: 12,
     color: '#777',
-    marginTop: 16,
+    marginTop: 14,
     textAlign: 'center',
   },
   link: {
-    color: '#3CB371',
-    fontWeight: '600',
+    color: '#2e7d32',
+    fontWeight: '700',
   },
+
   signupButton: {
-    backgroundColor: '#3CB371',
+    backgroundColor: '#2e7d32',
     paddingVertical: 14,
-    borderRadius: 10,
-    marginTop: 30,
+    borderRadius: 12,
+    marginTop: 18,
+    alignItems: 'center',
   },
   signupText: {
     color: '#fff',
-    textAlign: 'center',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 15,
   },
+
   footerText: {
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 16,
     fontSize: 13,
+    color: '#444',
   },
 });
 

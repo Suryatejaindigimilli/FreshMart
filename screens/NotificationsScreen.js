@@ -7,8 +7,24 @@ import {
   Image,
   ScrollView,
   Animated,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const t = {
+  c: {
+    bg: '#F6F7FB',
+    card: '#FFFFFF',
+    text: '#121212',
+    sub: '#6A6A6A',
+    line: '#E9ECF3',
+    pri: '#18A957',
+    priSoft: '#EAF8F1',
+    dot: '#FF3B30',
+  },
+};
 
 export default function NotificationsScreen({ navigation }) {
   const [notifications, setNotifications] = useState([
@@ -20,133 +36,192 @@ export default function NotificationsScreen({ navigation }) {
 
   const fadeAnim = useRef(notifications.map(() => new Animated.Value(0))).current;
 
-  // Animate on mount
   useEffect(() => {
     fadeAnim.forEach((anim, index) => {
       Animated.timing(anim, {
         toValue: 1,
-        duration: 400,
-        delay: index * 100,
+        duration: 380,
+        delay: index * 90,
         useNativeDriver: true,
       }).start();
     });
   }, [fadeAnim]);
 
-  // Mark all as read
+  const unreadCount = notifications.reduce((a, n) => a + (n.read ? 0 : 1), 0);
+
   const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    );
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const markOneAsRead = (id) => {
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={22} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity onPress={markAllAsRead}>
-          <Text style={styles.markReadText}>Mark all as read</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn} activeOpacity={0.85}>
+            <Icon name="arrow-back" size={20} color={t.c.text} />
+          </TouchableOpacity>
 
-      <ScrollView>
-        {notifications.map((item, index) => (
-          <Animated.View
-            key={item.id}
-            style={[styles.notificationCard, { opacity: fadeAnim[index] }]}
-          >
-            <Image source={item.image} style={styles.notificationImage} />
-            <View style={styles.notificationTextContainer}>
-              <Text
-                style={[
-                  styles.notificationTitle,
-                  !item.read && styles.unreadText,
-                ]}
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Notifications</Text>
+            {unreadCount > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <TouchableOpacity onPress={markAllAsRead} style={styles.chip} activeOpacity={0.85}>
+            <Icon name="checkmark-done-outline" size={16} color={t.c.pri} />
+            <Text style={styles.chipText}>Mark all</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* List */}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+          {notifications.map((item, index) => (
+            <Animated.View key={item.id} style={{ opacity: fadeAnim[index] }}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => markOneAsRead(item.id)}
+                style={[styles.card, !item.read && styles.cardUnread]}
               >
-                {item.title}
-              </Text>
-              <Text
-                style={[
-                  styles.notificationSubtitle,
-                  !item.read && styles.unreadText,
-                ]}
-              >
-                {item.subtitle}
-              </Text>
+                <View style={[styles.thumb, !item.read && styles.thumbUnread]}>
+                  <Image source={item.image} style={styles.img} />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.title, !item.read && styles.titleUnread]} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={[styles.sub, !item.read && styles.subUnread]} numberOfLines={2}>
+                    {item.subtitle}
+                  </Text>
+                </View>
+
+                {!item.read ? <View style={styles.dot} /> : <Icon name="chevron-forward" size={18} color="#A7ADB7" />}
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+
+          {notifications.length === 0 ? (
+            <View style={styles.empty}>
+              <Icon name="notifications-off-outline" size={42} color="#B5BAC4" />
+              <Text style={styles.emptyTitle}>No notifications</Text>
+              <Text style={styles.emptySub}>You’re all caught up.</Text>
             </View>
-            {!item.read && <View style={styles.unreadDot} />}
-          </Animated.View>
-        ))}
-      </ScrollView>
-    </View>
+          ) : null}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: 10,
+    backgroundColor: t.c.bg,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  container: { flex: 1, paddingHorizontal: 16 },
+
   header: {
+    paddingTop: 10,
+    paddingBottom: 10,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: t.c.card,
+    borderWidth: 1,
+    borderColor: t.c.line,
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: '900', color: t.c.text },
+  badge: {
+    backgroundColor: t.c.priSoft,
+    borderWidth: 1,
+    borderColor: '#BFEBD3',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
   },
-  markReadText: {
-    fontSize: 12,
-    color: '#1b5e20',
-    fontWeight: 'bold',
-  },
-  notificationCard: {
+  badgeText: { color: t.c.pri, fontWeight: '900', fontSize: 12 },
+
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    gap: 6,
+    backgroundColor: t.c.card,
+    borderWidth: 1,
+    borderColor: t.c.line,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 14,
+  },
+  chipText: { fontWeight: '900', color: t.c.pri, fontSize: 12 },
+
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: t.c.card,
+    borderWidth: 1,
+    borderColor: t.c.line,
+    borderRadius: 20,
     padding: 12,
-    marginBottom: 15,
-    elevation: 2,
+    marginBottom: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    position: 'relative',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 18,
+    elevation: 2,
   },
-  notificationImage: {
-    width: 50,
-    height: 50,
-    resizeMode: 'contain',
-    marginRight: 10,
+  cardUnread: {
+    backgroundColor: '#F2FBF6',
+    borderColor: '#CDEFE0',
   },
-  notificationTextContainer: {
-    flex: 1,
+
+  thumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#F7F8FB',
+    borderWidth: 1,
+    borderColor: t.c.line,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  notificationTitle: {
-    fontSize: 15,
-    color: '#2e7d32',
+  thumbUnread: {
+    backgroundColor: t.c.priSoft,
+    borderColor: '#BFEBD3',
   },
-  notificationSubtitle: {
-    fontSize: 13,
-    color: '#444',
-  },
-  unreadText: {
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  unreadDot: {
+  img: { width: 34, height: 34, resizeMode: 'contain' },
+
+  title: { fontSize: 14, fontWeight: '900', color: t.c.text },
+  titleUnread: { color: t.c.text },
+  sub: { marginTop: 3, fontSize: 12, fontWeight: '800', color: t.c.sub, lineHeight: 18 },
+  subUnread: { color: '#3C3C3C' },
+
+  dot: {
     width: 10,
     height: 10,
-    backgroundColor: 'red',
-    borderRadius: 5,
-    marginLeft: 8,
+    borderRadius: 6,
+    backgroundColor: t.c.dot,
   },
+
+  empty: { marginTop: 60, alignItems: 'center' },
+  emptyTitle: { marginTop: 10, fontSize: 14, fontWeight: '900', color: t.c.text },
+  emptySub: { marginTop: 4, fontSize: 12, fontWeight: '800', color: t.c.sub },
 });

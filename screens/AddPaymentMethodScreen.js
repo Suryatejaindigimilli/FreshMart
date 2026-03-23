@@ -6,11 +6,28 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const t = {
+  c: {
+    bg: '#F6F7FB',
+    card: '#FFFFFF',
+    text: '#121212',
+    sub: '#6A6A6A',
+    line: '#E9ECF3',
+    pri: '#18A957',
+    priSoft: '#EAF8F1',
+  },
+  r: { md: 16, lg: 20, pill: 999 },
+};
 
 export default function AddPaymentMethodScreen({ navigation }) {
-  const [type, setType] = useState('UPI'); // 'UPI' or 'Card'
+  const [type, setType] = useState('UPI');
   const [upiId, setUpiId] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
@@ -22,10 +39,7 @@ export default function AddPaymentMethodScreen({ navigation }) {
       return;
     }
 
-    if (
-      type === 'Card' &&
-      (cardNumber.length < 12 || expiry === '' || cvv.length < 3)
-    ) {
+    if (type === 'Card' && (cardNumber.replace(/\s/g, '').length < 12 || expiry === '' || cvv.length < 3)) {
       Alert.alert('Error', 'Please enter valid card details');
       return;
     }
@@ -34,132 +48,274 @@ export default function AddPaymentMethodScreen({ navigation }) {
     navigation.goBack();
   };
 
+  const formatCard = (v) => {
+    const x = v.replace(/\D/g, '').slice(0, 16);
+    const parts = x.match(/.{1,4}/g) || [];
+    return parts.join(' ');
+  };
+
+  const formatExpiry = (v) => {
+    const x = v.replace(/\D/g, '').slice(0, 4);
+    if (x.length <= 2) return x;
+    return `${x.slice(0, 2)}/${x.slice(2)}`;
+  };
+
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={22} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Payment Method</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'Shop' })}>
-          <Icon name="home-outline" size={22} color="#000" />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.85} style={styles.iconBtn}>
+              <Icon name="chevron-back" size={22} color={t.c.text} />
+            </TouchableOpacity>
 
-      {/* Payment Type Selector */}
-      <View style={styles.typeSwitch}>
-        <TouchableOpacity
-          style={[styles.typeButton, type === 'UPI' && styles.activeType]}
-          onPress={() => setType('UPI')}
-        >
-          <Text style={type === 'UPI' ? styles.activeText : styles.inactiveText}>UPI</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, type === 'Card' && styles.activeType]}
-          onPress={() => setType('Card')}
-        >
-          <Text style={type === 'Card' ? styles.activeText : styles.inactiveText}>Card</Text>
-        </TouchableOpacity>
-      </View>
+            <Text style={styles.headerTitle}>Add Payment</Text>
 
-      {/* Inputs */}
-      {type === 'UPI' ? (
-        <>
-          <Text style={styles.label}>UPI ID</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="example@upi"
-            value={upiId}
-            onChangeText={setUpiId}
-          />
-        </>
-      ) : (
-        <>
-          <Text style={styles.label}>Card Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="**** **** **** ****"
-            keyboardType="number-pad"
-            value={cardNumber}
-            onChangeText={setCardNumber}
-          />
+            <TouchableOpacity
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Shop' })}
+              activeOpacity={0.85}
+              style={styles.iconBtn}
+            >
+              <Icon name="home-outline" size={20} color={t.c.text} />
+            </TouchableOpacity>
+          </View>
 
-          <Text style={styles.label}>Expiry (MM/YY)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="08/28"
-            value={expiry}
-            onChangeText={setExpiry}
-          />
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Choose method</Text>
 
-          <Text style={styles.label}>CVV</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="***"
-            keyboardType="number-pad"
-            secureTextEntry
-            value={cvv}
-            onChangeText={setCvv}
-          />
-        </>
-      )}
+            <View style={styles.segment}>
+              <TouchableOpacity
+                style={[styles.segBtn, type === 'UPI' ? styles.segActive : null]}
+                onPress={() => setType('UPI')}
+                activeOpacity={0.9}
+              >
+                <Icon name="qr-code-outline" size={18} color={type === 'UPI' ? '#fff' : t.c.sub} />
+                <Text style={[styles.segText, type === 'UPI' ? styles.segTextActive : null]}>UPI</Text>
+              </TouchableOpacity>
 
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveText}>Save Method</Text>
-      </TouchableOpacity>
-    </View>
+              <TouchableOpacity
+                style={[styles.segBtn, type === 'Card' ? styles.segActive : null]}
+                onPress={() => setType('Card')}
+                activeOpacity={0.9}
+              >
+                <Icon name="card-outline" size={18} color={type === 'Card' ? '#fff' : t.c.sub} />
+                <Text style={[styles.segText, type === 'Card' ? styles.segTextActive : null]}>Card</Text>
+              </TouchableOpacity>
+            </View>
+
+            {type === 'UPI' ? (
+              <>
+                <Text style={styles.label}>UPI ID</Text>
+                <View style={styles.inputWrap}>
+                  <Icon name="at-outline" size={18} color={t.c.sub} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="example@upi"
+                    placeholderTextColor="#8E8E8E"
+                    value={upiId}
+                    onChangeText={setUpiId}
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <View style={styles.hintRow}>
+                  <Icon name="shield-checkmark-outline" size={16} color={t.c.pri} />
+                  <Text style={styles.hintText}>Your UPI ID is securely stored.</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.label}>Card Number</Text>
+                <View style={styles.inputWrap}>
+                  <Icon name="card-outline" size={18} color={t.c.sub} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="1234 5678 9012 3456"
+                    placeholderTextColor="#8E8E8E"
+                    keyboardType="number-pad"
+                    value={cardNumber}
+                    onChangeText={(v) => setCardNumber(formatCard(v))}
+                  />
+                </View>
+
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Expiry</Text>
+                    <View style={styles.inputWrap}>
+                      <Icon name="calendar-outline" size={18} color={t.c.sub} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="MM/YY"
+                        placeholderTextColor="#8E8E8E"
+                        keyboardType="number-pad"
+                        value={expiry}
+                        onChangeText={(v) => setExpiry(formatExpiry(v))}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={{ width: 12 }} />
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>CVV</Text>
+                    <View style={styles.inputWrap}>
+                      <Icon name="lock-closed-outline" size={18} color={t.c.sub} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="***"
+                        placeholderTextColor="#8E8E8E"
+                        keyboardType="number-pad"
+                        secureTextEntry
+                        value={cvv}
+                        onChangeText={(v) => setCvv(v.replace(/\D/g, '').slice(0, 4))}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.hintRow}>
+                  <Icon name="lock-closed-outline" size={16} color={t.c.pri} />
+                  <Text style={styles.hintText}>Card details are encrypted.</Text>
+                </View>
+              </>
+            )}
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave} activeOpacity={0.9}>
+              <Text style={styles.saveText}>Save Method</Text>
+              <Icon name="checkmark" size={18} color="#fff" style={{ marginLeft: 8 }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              activeOpacity={0.9}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.secondaryText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20, paddingTop: 50 },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 20,
+  safe: { flex: 1, backgroundColor: t.c.bg },
+  container: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 18 },
+
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-  headerTitle: { fontSize: 16, fontWeight: 'bold' },
-  label: { fontWeight: '600', marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
+  headerTitle: { fontSize: 16, fontWeight: '900', color: t.c.text },
+
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: t.c.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 2,
+  },
+
+  card: {
+    backgroundColor: t.c.card,
+    borderRadius: t.r.lg,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 18,
+    elevation: 2,
+  },
+
+  cardTitle: { fontSize: 14, fontWeight: '900', color: t.c.text, marginBottom: 10 },
+
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F7',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 14,
+  },
+
+  segBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  segActive: { backgroundColor: t.c.pri },
+
+  segText: { fontSize: 13, fontWeight: '900', color: t.c.sub },
+  segTextActive: { color: '#fff' },
+
+  label: { fontSize: 12, fontWeight: '900', color: t.c.text, marginBottom: 8, marginTop: 10 },
+
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F7',
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  typeSwitch: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 20,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#eee',
-  },
-  typeButton: {
-    padding: 12,
+
+  input: {
     flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: '700',
+    color: t.c.text,
+    paddingVertical: 0,
+  },
+
+  row: { flexDirection: 'row', marginTop: 8 },
+
+  hintRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: t.c.priSoft,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    marginTop: 12,
+    gap: 8,
   },
-  activeType: {
-    backgroundColor: '#2e7d32',
-  },
-  activeText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  inactiveText: {
-    color: '#555',
-  },
+
+  hintText: { fontSize: 12, fontWeight: '800', color: t.c.pri },
+
   saveButton: {
-    backgroundColor: '#2e7d32',
-    padding: 14,
-    borderRadius: 8,
+    marginTop: 16,
+    backgroundColor: t.c.pri,
+    borderRadius: 16,
+    paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 30,
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
-  saveText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+
+  saveText: { color: '#fff', fontWeight: '900', fontSize: 14 },
+
+  secondaryBtn: {
+    marginTop: 10,
+    backgroundColor: t.c.priSoft,
+    borderRadius: 16,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+
+  secondaryText: { color: t.c.pri, fontWeight: '900', fontSize: 14 },
 });
